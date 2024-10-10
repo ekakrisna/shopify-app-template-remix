@@ -14,8 +14,9 @@ import {
   Link,
   InlineStack,
 } from "@shopify/polaris";
-import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
+import Header from "~/components/header";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -30,8 +31,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   ];
   const response = await admin.graphql(
     `#graphql
-      mutation populateProduct($input: ProductInput!) {
-        productCreate(input: $input) {
+      mutation populateProduct($product: ProductCreateInput!) {
+        productCreate(product: $product) {
           product {
             id
             title
@@ -52,7 +53,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }`,
     {
       variables: {
-        input: {
+        product: {
           title: `${color} Snowboard`,
         },
       },
@@ -113,11 +114,12 @@ export default function Index() {
 
   return (
     <Page>
-      <TitleBar title="Remix app template">
+      <Header />
+      {/* <TitleBar title="Remix app template">
         <button variant="primary" onClick={generateProduct}>
           Generate a product
         </button>
-      </TitleBar>
+      </TitleBar> */}
       <BlockStack gap="500">
         <Layout>
           <Layout.Section>

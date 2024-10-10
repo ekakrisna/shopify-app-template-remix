@@ -1,16 +1,33 @@
-# This file stores configurations for your Shopify app.
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-scopes = "write_products"
+client_id = "9568b917669402decdb0a9edf20a1fc9"
+name = "Local - HubOn Local Pickup"
+handle = "hubon-app"
+application_url = "https://efd6-182-253-51-229.ngrok-free.app"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "hubondemodev2.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_locations,read_orders,read_product_listings,read_products,read_themes,write_metaobject_definitions,write_metaobjects,write_orders,write_products,write_publications"
+
+[auth]
+redirect_urls = [
+  "https://efd6-182-253-51-229.ngrok-free.app/auth/callback",
+  "https://efd6-182-253-51-229.ngrok-free.app/auth/shopify/callback",
+  "https://efd6-182-253-51-229.ngrok-free.app/api/auth/callback"
+]
 
 [webhooks]
-api_version = "2024-07"
+api_version = "2024-10"
 
-  # Mandatory compliance topics for public apps
-  # Delete only if the app is not public
-  # See: https://shopify.dev/docs/apps/build/privacy-law-compliance
   [[webhooks.subscriptions]]
   uri = "/webhooks/customers/data_request"
-  compliance_topics = [ "customers/data_request"]
+  compliance_topics = [ "customers/data_request" ]
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/customers/redact"
@@ -20,15 +37,9 @@ api_version = "2024-07"
   uri = "/webhooks/shop/redact"
   compliance_topics = [ "shop/redact" ]
 
-  # When a shop uninstalls the app, delete the session for that shop
   [[webhooks.subscriptions]]
-  uri = "/webhooks/app/uninstalled"
   topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
 
-  # # For reference
-  # # Only receive webhooks for products with a price >= 10.00
-  # # See: https://shopify.dev/docs/apps/build/webhooks/customize/filters
-  # [[webhooks.subscriptions]]
-  # topics = ["products/update"]
-  # uri = "https://example.com/webhooks"
-  # filter = "variants.price:>=10.00"
+[pos]
+embedded = false

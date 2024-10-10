@@ -9,11 +9,11 @@ generator client {
 // enough when changing adapters.
 // See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
 datasource db {
-  provider = "sqlite"
-  url      = "file:dev.sqlite"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
-model Session {
+model session {
   id            String    @id
   shop          String
   state         String
@@ -29,4 +29,32 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+}
+
+model hubon {
+  id                         Int     @id @default(autoincrement())
+  sessionId                  String  @unique
+  apiKey                     String  @db.LongText
+  defaultProductId           String?
+  defaultProductVariantId    String?
+  additionalProductVariantId String?
+}
+
+model guide {
+  id             Int     @id @default(autoincrement())
+  sessionId      String  @unique
+  isCarrier      Boolean @default(false)
+  isPickupWidget Boolean @default(false)
+  isButtonBuy    Boolean @default(false)
+}
+
+model order {
+  id        Int      @id @default(autoincrement())
+  sessionId String   @db.LongText
+  status    String
+  orderId   String
+  response  String   @db.LongText
+  payload   String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 }

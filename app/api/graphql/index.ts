@@ -9,6 +9,59 @@ import type { publicationResponse } from "~/types/publication.type";
 import type { Theme, ThemeNode, ThemeResponse } from "~/types/theme.type";
 import { authenticate } from "~/shopify.server";
 
+export async function getProductsApi(
+  request: Request,
+  first: number = 5,
+  afterCursor?: string,
+): Promise<ProductResponse> {
+  try {
+    const { admin } = await authenticate.admin(request);
+
+    const response = await admin.graphql(
+      `#graphql
+        query ($first: Int!, $after: String)  {
+          products(first: $first, after:$after) {
+            edges {
+              node {
+                id
+                name
+                handle
+                resourcePublicationOnCurrentPublication {
+                  publication {
+                    name
+                    id
+                  }
+                  publishDate
+                  isPublished
+                }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }
+          }
+        }`,
+      {
+        variables: {
+          first: first,
+          after: afterCursor,
+        },
+      },
+    );
+
+    const data = await response.json();
+    if (!data.data) throw new Error("Failed to get the products.");
+    const products = data.data?.products.edges;
+
+    return {
+      products: products.map((edge: ProductNode) => edge.node),
+    };
+  } catch (error) {
+    console.log("Failed to get the products.");
+    throw error;
+  }
+}
+
 export async function getProductApi(
   request: Request,
   id: string,
@@ -22,6 +75,7 @@ export async function getProductApi(
           product(id: $id) {
             id
             title
+            handle
             variants(first: 10) {
               edges {
                 node {
@@ -360,7 +414,7 @@ export async function updateProductVariantApi(
   }
 }
 
-export async function getAllLocationsApi(
+export async function getLocationsApi(
   request: Request,
   first: number = 5,
   afterCursor?: string,

@@ -12,7 +12,8 @@ export interface ProductNode {
 }
 
 export interface ProductResponse {
-  product: ProductInput;
+  products?: ProductInput[];
+  product?: ProductInput;
   variants?: ProductVariant[];
   userErrors?: string[];
 }

@@ -2,7 +2,7 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { Outlet, useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
-import type { LoaderFunctionArgs } from "react-router";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { authenticateUser } from "~/helpers/authentication";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -11,11 +11,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const { redirect, session } = await authenticate.admin(request);
   const { id } = session;
 
-  const user = await authenticateUser({
+  const data = {
     sessionId: id,
     apiUrl: HUBON_API_URL,
     clientId: HUBON_CLIENT_ID,
-  });
+  };
+
+  const user = await authenticateUser(data);
 
   if (!user) return redirect("/app/hubon");
 

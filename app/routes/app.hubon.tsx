@@ -20,7 +20,7 @@ import { validateHubon } from "~/helpers/validation";
 import { getHubonUserApi } from "~/api/hubon";
 import {
   createProductApi,
-  getAllLocationsApi,
+  getLocationsApi,
   createProductVariantApi,
   getPublicationsApi,
   getProductApi,
@@ -89,7 +89,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const publicationData = await getPublicationsApi(request, 250);
   const publications = publicationData.publications || [];
-  const getLocations = await getAllLocationsApi(request, 250);
+  const getLocations = await getLocationsApi(request, 250);
   const locations = getLocations.locations || [];
 
   const productInput: ProductInput = {

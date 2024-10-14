@@ -1,86 +1,35 @@
-import {
-  Box,
-  Card,
-  Layout,
-  Link,
-  List,
-  Page,
-  Text,
-  BlockStack,
-} from "@shopify/polaris";
-// import { TitleBar } from "@shopify/app-bridge-react";
-import Header from "~/components/header";
+import type { LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Outlet, useLoaderData } from "@remix-run/react";
+import { authenticateUser } from "~/helpers/authentication";
+import { authenticate } from "~/shopify.server";
+import { AppProvider } from "@shopify/shopify-app-remix/react";
 
-export default function AdditionalPage() {
-  return (
-    <Page>
-      {/* <TitleBar title="FAQ" /> */}
-      <Header />
+export async function loader({ request }: LoaderFunctionArgs) {
+  const HUBON_API_URL = String(process.env.HUBON_API_URL);
+  const HUBON_CLIENT_ID = String(process.env.HUBON_CLIENT_ID);
+  const { redirect, session } = await authenticate.admin(request);
+  const { id } = session;
 
-      <Layout>
-        <Layout.Section>
-          <Card>
-            <BlockStack gap="300">
-              <Text as="p" variant="bodyMd">
-                The app template comes with an additional page which
-                demonstrates how to create multiple pages within app navigation
-                using{" "}
-                <Link
-                  url="https://shopify.dev/docs/apps/tools/app-bridge"
-                  target="_blank"
-                  removeUnderline
-                >
-                  App Bridge
-                </Link>
-                .
-              </Text>
-              <Text as="p" variant="bodyMd">
-                To create your own page and have it show up in the app
-                navigation, add a page inside <Code>app/routes</Code>, and a
-                link to it in the <Code>&lt;NavMenu&gt;</Code> component found
-                in <Code>app/routes/app.jsx</Code>.
-              </Text>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-        <Layout.Section variant="oneThird">
-          <Card>
-            <BlockStack gap="200">
-              <Text as="h2" variant="headingMd">
-                Resources
-              </Text>
-              <List>
-                <List.Item>
-                  <Link
-                    url="https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav"
-                    target="_blank"
-                    removeUnderline
-                  >
-                    App nav best practices
-                  </Link>
-                </List.Item>
-              </List>
-            </BlockStack>
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
-  );
+  const data = {
+    sessionId: id,
+    apiUrl: HUBON_API_URL,
+    clientId: HUBON_CLIENT_ID,
+  };
+
+  const user = await authenticateUser(data);
+
+  if (!user) return redirect("/app/hubon");
+
+  return json({ apiKey: process.env.SHOPIFY_API_KEY || "" });
 }
 
-function Code({ children }: { children: React.ReactNode }) {
+export default function FAQPage() {
+  const { apiKey } = useLoaderData<typeof loader>();
+
   return (
-    <Box
-      as="span"
-      padding="025"
-      paddingInlineStart="100"
-      paddingInlineEnd="100"
-      background="bg-surface-active"
-      borderWidth="025"
-      borderColor="border"
-      borderRadius="100"
-    >
-      <code>{children}</code>
-    </Box>
+    <AppProvider isEmbeddedApp apiKey={apiKey}>
+      <Outlet />
+    </AppProvider>
   );
 }

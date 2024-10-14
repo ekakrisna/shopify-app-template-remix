@@ -7,7 +7,7 @@ import {
 } from "@shopify/polaris-icons";
 import { json } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
-import type { LoaderFunctionArgs } from "react-router";
+import type { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 import { Guide } from "~/models/guide.server";
 
@@ -96,7 +96,7 @@ export default function GuidesPage() {
           </Link>
         </Layout.Section>
         <Layout.Section variant="oneThird">
-          <Link to="/app/guides/button" className="hover:underline">
+          <Link to="/app/guides/hide-button" className="hover:underline">
             <Card>
               <div className="w-full flex items-center justify-center">
                 <div className="relative space-y-4">

@@ -15,7 +15,7 @@ import SecondStep from "~/images/step-2.webp";
 import ThirdStep from "~/images/step-3.webp";
 import ForthStep from "~/images/step-4.webp";
 import FifthStep from "~/images/step-5.webp";
-import { Modal, TitleBar } from "@shopify/app-bridge-react";
+import { Modal, TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { Guide } from "~/models/guide.server";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -49,6 +49,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function RatePage() {
   const navigation = useNavigation();
+  const shopify = useAppBridge();
   const submit = useSubmit();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -56,14 +57,15 @@ export default function RatePage() {
   useEffect(() => {
     if (actionData) {
       setShowModal(false);
-      shopify.toast.show("Successfully updated guide!");
       if (actionData.errors.error) {
         shopify.toast.show(actionData.errors.error_message, {
           isError: actionData.errors.error,
         });
+      } else {
+        shopify.toast.show("Successfully updated guide!");
       }
     }
-  }, [actionData]);
+  }, [actionData, shopify]);
 
   const { step, setting_url } = loaderData;
   const [showModal, setShowModal] = useState<boolean>(false);
@@ -92,7 +94,7 @@ export default function RatePage() {
   }, [showModal]);
 
   return (
-    <Page>
+    <Page backAction={{ content: "Guides", url: "/app/guides" }}>
       <div className="space-y-2 mb-8">
         <Text variant="headingXl" as="h1" alignment="center">
           Add HubOn Local Pickup Rate

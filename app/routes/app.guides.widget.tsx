@@ -82,7 +82,7 @@ export default function WidgetPage() {
   }, [showModal]);
 
   return (
-    <Page>
+    <Page backAction={{ content: "Guides", url: "/app/guides" }}>
       <div className="space-y-2 mb-8">
         <Text variant="headingXl" as="h1" alignment="center">
           Add HubOn Local Pickup Widget

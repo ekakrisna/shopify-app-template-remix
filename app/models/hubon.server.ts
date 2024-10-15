@@ -6,7 +6,10 @@ export interface HubonData {
   sessionId: string;
   defaultProductId?: string | null;
   defaultProductVariantId?: string | null;
+  additionalProductId?: string | null;
   additionalProductVariantId?: string | null;
+  thresholdPrice?: string | null;
+  shippingPrice?: string | null;
 }
 
 interface GetUser {

@@ -4,6 +4,7 @@ import {
   useLoaderData,
   Form,
   useNavigation,
+  useNavigate,
 } from "@remix-run/react";
 import { json } from "@remix-run/node";
 import {
@@ -15,7 +16,7 @@ import {
   Card,
 } from "@shopify/polaris";
 import { authenticate } from "~/shopify.server";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { validateHubon } from "~/helpers/validation";
 import { getHubonUserApi } from "~/api/hubon";
 import {
@@ -24,8 +25,8 @@ import {
   createProductVariantApi,
   getPublicationsApi,
   getProductApi,
-  updateProductApi,
-  updateProductVariantApi,
+  publishProductApi,
+  updateProductOptionsApi,
 } from "~/api/graphql";
 import { DESCRIPTION, MEDIA_SRC } from "~/helpers/const";
 import type { ProductInput, ProductVariantInput } from "~/types/product.type";
@@ -43,7 +44,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { redirect, session } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const { id } = session;
   const HUBON_API_URL = String(process.env.HUBON_API_URL);
   const HUBON_CLIENT_ID = String(process.env.HUBON_CLIENT_ID);
   const HUBON_PRODUCT_NAME = String(process.env.HUBON_SHIPPING_NAME);
@@ -52,202 +54,421 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const apiKey = String(formData.get("apiKey"));
   const errors = validateHubon({
     apiKey: apiKey,
-    sessionId: session.id,
+    sessionId: id,
   });
 
-  if (errors) return json({ errors }, { status: 500 });
+  if (errors) return json({ errors });
 
-  const { error, details, registered_customer } = await getHubonUserApi({
+  const { error, registered_customer } = await getHubonUserApi({
     apiUrl: HUBON_API_URL,
     apiKey: apiKey,
     hubonClientId: HUBON_CLIENT_ID,
   });
 
-  if (error) {
-    return json(
-      { errors: { error_message: details?.message, error: true } },
-      { status: 500 },
-    );
-  }
-
-  if (!registered_customer) {
-    return json(
-      { errors: { error_message: details?.message, error: true } },
-      { status: 500 },
-    );
+  if (error || !registered_customer) {
+    return json({ errors: { error_message: "Invalid API Key.", error: true } });
   }
 
   const setting = registered_customer.setting;
 
-  const user = await User.getByid(session.id);
-
-  let productId = null;
-  if (user && user.defaultProductId) {
-    const productData = await getProductApi(request, user.defaultProductId);
-    if (productData.product.id) productId = productData.product.id;
-  }
+  const user = await User.getByid(id);
 
   const publicationData = await getPublicationsApi(request, 250);
   const publications = publicationData.publications || [];
+  console.log("PUBLICATIONS", publications);
   const getLocations = await getLocationsApi(request, 250);
   const locations = getLocations.locations || [];
 
   const productInput: ProductInput = {
-    ...(productId && { id: productId }),
     title: HUBON_PRODUCT_NAME,
     descriptionHtml: DESCRIPTION,
     handle: HUBON_PRODUCT_NAME.toLocaleLowerCase().replace(/ /g, "-"),
     vendor: HUBON_PRODUCT_NAME,
     status: "ACTIVE",
-    media: productId
-      ? []
-      : [
-          {
-            alt: HUBON_PRODUCT_NAME,
-            mediaContentType: "IMAGE",
-            originalSource: MEDIA_SRC,
-          },
-        ],
-    ...(!productId && {
-      productOptions: [
-        {
-          name: "Note",
-          values: [{ name: "Pick up from a hub near you" }],
-        },
-      ],
-    }),
-    ...(!productId && {
-      productPublications: publications.map((item) => ({
-        publicationId: item.id,
-      })),
-    }),
     productType: "Shipping",
   };
 
-  let productData = null;
-  if (productId) {
-    console.log("UPDATE PRODUCT");
-    productData = await updateProductApi(productInput, request);
-  } else {
-    console.log("CREATE PRODUCT");
-    productData = await createProductApi(productInput, request);
-  }
+  if (user) {
+    const optionValueName = user?.shippingPrice
+      ? `with a minimum order of $${user.shippingPrice}`
+      : "Pick up from a hub near you.";
+    // -----------------------------
+    // DEFAULT PRODUCT
+    // -----------------------------
+    if (user.defaultProductId) {
+      const productData = await getProductApi(request, user.defaultProductId);
+      const product = productData.product;
+      console.log("DEFAULT PRODUCT", product, product?.options);
+      if (product) {
+        const productId = product.id;
+        const defaultOption = product.options?.[0];
 
-  const product = productData.product;
-  const variants = productData.variants;
+        if (productId && defaultOption) {
+          const optionInput = {
+            productId: String(productId),
+            option: { id: String(defaultOption.id) },
+            optionValuesToUpdate: defaultOption.optionValues?.map((item) => ({
+              id: String(item.id),
+              name: optionValueName,
+            })),
+          };
 
-  const variantInput: ProductVariantInput = {
-    media: productId
-      ? []
-      : [
+          console.log("OPTION INPUT", optionInput);
+          const productOptionUpdate = await updateProductOptionsApi(
+            optionInput,
+            request,
+          );
+          console.log("PRODUCT OPTION UPDATE", productOptionUpdate);
+        }
+      } else {
+        productInput.media = [
           {
             alt: HUBON_PRODUCT_NAME,
             mediaContentType: "IMAGE",
             originalSource: MEDIA_SRC,
           },
-        ],
-    productId: product.id!,
-    strategy: "REMOVE_STANDALONE_VARIANT",
-    variants: !productId
-      ? [
-          {
-            optionValues: [
+        ];
+        productInput.productOptions = [
+          { name: "Note", values: [{ name: optionValueName }] },
+        ];
+        console.log("PRODUCT INPUT", productInput);
+
+        console.log("CREATING DEFAULT PRODUCT NULL");
+        const productData = await createProductApi(productInput, request);
+        console.log("CREATING DEFAULT NULL DONE");
+        console.log("DEFAULT PRODUCT DATA NULL", productData);
+        const productId = productData.product?.id;
+        const variants = productData.variants;
+        if (productId) {
+          const publishProduct = await publishProductApi(request, {
+            id: productId,
+            input: publications.map((item) => ({ publicationId: item.id })),
+          });
+          console.log("PUBLISH DEFAULT PRODUCT", publishProduct);
+
+          if (variants?.length) {
+            console.log("CREATING DEFAULT VARIANT");
+            const variantInput: ProductVariantInput = {
+              media: [
+                {
+                  alt: HUBON_PRODUCT_NAME,
+                  mediaContentType: "IMAGE",
+                  originalSource: MEDIA_SRC,
+                },
+              ],
+              productId: productId,
+              strategy: "REMOVE_STANDALONE_VARIANT",
+              variants: [
+                {
+                  optionValues: [
+                    {
+                      name: optionValueName,
+                      optionName: "Note",
+                    },
+                  ],
+                  compareAtPrice: setting.external_unit_price,
+                  price: setting.external_unit_price,
+                  barcode: HUBON_CLIENT_ID.toString(),
+                  mediaSrc: MEDIA_SRC,
+                  inventoryPolicy: "CONTINUE",
+                  inventoryItem: {
+                    cost: setting.external_unit_price,
+                    countryCodeOfOrigin: "US",
+                    measurement: {
+                      weight: {
+                        unit: "KILOGRAMS",
+                        value: 96000,
+                      },
+                    },
+                    requiresShipping: true,
+                    sku: HUBON_CLIENT_ID.toString(),
+                    tracked: true,
+                  },
+                  inventoryQuantities: locations.map((location: Location) => ({
+                    availableQuantity: 99999,
+                    locationId: location.id,
+                  })),
+                },
+              ],
+            };
+            console.log("VARIANT INPUT", variantInput);
+            const variantData = await createProductVariantApi(
+              variantInput,
+              request,
+            );
+            console.log("VARIANT DATA", variantData);
+            const result = await User.createOrUpdate({
+              apiKey: apiKey,
+              sessionId: id,
+              defaultProductId: productId,
+              defaultProductVariantId: variantData.variants?.[0].id,
+            });
+            console.log("RESULT", result);
+            if (!result) {
+              return json({
+                errors: {
+                  error_message: "Failed to creating or updating user.",
+                  error: true,
+                },
+              });
+            }
+          }
+        }
+      }
+    } else {
+      productInput.media = [
+        {
+          alt: HUBON_PRODUCT_NAME,
+          mediaContentType: "IMAGE",
+          originalSource: MEDIA_SRC,
+        },
+      ];
+      productInput.productOptions = [
+        {
+          name: "Note",
+          values: [{ name: optionValueName }],
+        },
+      ];
+      console.log("PRODUCT INPUT", productInput);
+
+      console.log("CREATING DEFAULT PRODUCT");
+      const productData = await createProductApi(productInput, request);
+      console.log("CREATING DEFAULT DONE");
+      console.log("DEFAULT PRODUCT DATA", productData);
+      const productId = productData.product?.id;
+      const variants = productData.variants;
+
+      if (productId) {
+        const publishProduct = await publishProductApi(request, {
+          id: productId,
+          input: publications.map((item) => ({ publicationId: item.id })),
+        });
+        console.log("DEFAULT PUBLISH PRODUCT", publishProduct);
+
+        if (variants?.length) {
+          console.log("CREATING DEFAULT VARIANT");
+          const variantInput: ProductVariantInput = {
+            media: [
               {
-                name: "Pick up from a hub near you",
-                optionName: "Note",
+                alt: HUBON_PRODUCT_NAME,
+                mediaContentType: "IMAGE",
+                originalSource: MEDIA_SRC,
               },
             ],
-            compareAtPrice: setting.external_unit_price,
-            price: setting.external_unit_price,
-            barcode: HUBON_CLIENT_ID.toString(),
-            mediaSrc: MEDIA_SRC,
-            inventoryPolicy: "CONTINUE",
-            inventoryItem: {
-              cost: setting.external_unit_price,
-              countryCodeOfOrigin: "US",
-              measurement: {
-                weight: {
-                  unit: "KILOGRAMS",
-                  value: 96000,
+            productId: productId,
+            strategy: "REMOVE_STANDALONE_VARIANT",
+            variants: [
+              {
+                optionValues: [
+                  {
+                    name: optionValueName,
+                    optionName: "Note",
+                  },
+                ],
+                compareAtPrice: setting.external_unit_price,
+                price: setting.external_unit_price,
+                barcode: HUBON_CLIENT_ID.toString(),
+                mediaSrc: MEDIA_SRC,
+                inventoryPolicy: "CONTINUE",
+                inventoryItem: {
+                  cost: setting.external_unit_price,
+                  countryCodeOfOrigin: "US",
+                  measurement: {
+                    weight: {
+                      unit: "KILOGRAMS",
+                      value: 96000,
+                    },
+                  },
+                  requiresShipping: true,
+                  sku: HUBON_CLIENT_ID.toString(),
+                  tracked: true,
                 },
+                inventoryQuantities: locations.map((location: Location) => ({
+                  availableQuantity: 99999,
+                  locationId: location.id,
+                })),
               },
-              requiresShipping: true,
-              sku: HUBON_CLIENT_ID.toString(),
-              tracked: true,
-            },
-            inventoryQuantities: locations.map((location: Location) => ({
-              availableQuantity: 99999,
-              locationId: location.id,
+            ],
+          };
+          console.log("DEFAULT VARIANT INPUT", variantInput);
+          const variantData = await createProductVariantApi(
+            variantInput,
+            request,
+          );
+          console.log("DEFAULT VARIANT DATA", variantData);
+          const result = await User.createOrUpdate({
+            apiKey: apiKey,
+            sessionId: id,
+            defaultProductId: productId,
+            defaultProductVariantId: variantData.variants?.[0].id,
+          });
+          console.log("RESULT", result);
+        }
+      }
+    }
+
+    // -----------------------------
+    // ADDITIONAL PRODUCT
+    // -----------------------------
+    if (user.additionalProductId) {
+      const productData = await getProductApi(
+        request,
+        user.additionalProductId,
+      );
+      const product = productData.product;
+      console.log("ADDITIONAL PRODUCT", product);
+      if (product) {
+        const productId = product.id;
+        const defaultOption = product.options?.[0];
+
+        if (productId && defaultOption) {
+          const optionInput = {
+            productId: String(productId),
+            option: { id: String(defaultOption.id) },
+            optionValuesToUpdate: defaultOption.optionValues?.map((item) => ({
+              id: String(item.id),
+              name: optionValueName,
             })),
+          };
+
+          console.log("OPTION INPUT", optionInput);
+          const productOptionUpdate = await updateProductOptionsApi(
+            optionInput,
+            request,
+          );
+          console.log("PRODUCT OPTION UPDATE", productOptionUpdate);
+        }
+      } else {
+        productInput.media = [
+          {
+            alt: HUBON_PRODUCT_NAME,
+            mediaContentType: "IMAGE",
+            originalSource: MEDIA_SRC,
           },
-        ]
-      : (variants || []).map((variant) => ({
-          id: variant.id,
-          optionValues: [
-            {
-              name: "Pick up from a hub near you",
-              optionName: "Note",
-            },
-          ],
-          compareAtPrice: setting.external_unit_price,
-          price: setting.external_unit_price,
-          barcode: HUBON_CLIENT_ID.toString(),
-          mediaSrc: MEDIA_SRC,
-          inventoryPolicy: "CONTINUE",
-          inventoryItem: {
-            cost: setting.external_unit_price,
-            countryCodeOfOrigin: "US",
-            measurement: {
-              weight: {
-                unit: "KILOGRAMS",
-                value: 96000,
-              },
-            },
-            requiresShipping: true,
-            sku: HUBON_CLIENT_ID.toString(),
-            tracked: true,
-          },
-        })),
-  };
+        ];
+        productInput.productOptions = [
+          { name: "Note", values: [{ name: optionValueName }] },
+        ];
+        console.log("PRODUCT INPUT", productInput);
 
-  let variantData = null;
-  if (productId) {
-    console.log("UPDATE PRODUCT VARIANT");
-    variantData = await updateProductVariantApi(variantInput, request);
-  } else {
-    console.log("CREATE PRODUCT VARIANT");
-    variantData = await createProductVariantApi(variantInput, request);
-  }
+        console.log("CREATING ADDITIONAL PRODUCT");
+        const productData = await createProductApi(productInput, request);
+        console.log("CREATING ADDITIONAL DONE");
+        console.log("ADDITIONAL PRODUCT DATA", productData);
+        const productId = productData.product?.id;
+        const variants = productData.variants;
 
-  const data = {
-    apiKey: apiKey,
-    sessionId: session.id,
-    defaultProductId: variantData.product.id,
-    defaultProductVariantId: variantData.variants?.[0]?.id,
-  };
+        if (productId) {
+          const publishProduct = await publishProductApi(request, {
+            id: productId,
+            input: publications.map((item) => ({ publicationId: item.id })),
+          });
+          console.log("ADDITIONAL PUBLISH PRODUCT", publishProduct);
 
-  const result = await User.createOrUpdate(data);
+          if (variants?.length) {
+            console.log("CREATING ADDITIONAL VARIANT");
+            const variantInput: ProductVariantInput = {
+              media: [
+                {
+                  alt: HUBON_PRODUCT_NAME,
+                  mediaContentType: "IMAGE",
+                  originalSource: MEDIA_SRC,
+                },
+              ],
+              productId: productId,
+              strategy: "REMOVE_STANDALONE_VARIANT",
+              variants: [
+                {
+                  optionValues: [
+                    {
+                      name: "Pick up from a hub near you",
+                      optionName: "Note",
+                    },
+                  ],
+                  compareAtPrice: setting.external_unit_price,
+                  price: setting.external_unit_price,
+                  barcode: HUBON_CLIENT_ID.toString(),
+                  mediaSrc: MEDIA_SRC,
+                  inventoryPolicy: "CONTINUE",
+                  inventoryItem: {
+                    cost: setting.external_unit_price,
+                    countryCodeOfOrigin: "US",
+                    measurement: {
+                      weight: {
+                        unit: "KILOGRAMS",
+                        value: 96000,
+                      },
+                    },
+                    requiresShipping: true,
+                    sku: HUBON_CLIENT_ID.toString(),
+                    tracked: true,
+                  },
+                  inventoryQuantities: locations.map((location: Location) => ({
+                    availableQuantity: 99999,
+                    locationId: location.id,
+                  })),
+                },
+              ],
+            };
+            console.log("ADDITIONAL VARIANT INPUT", variantInput);
+            const variantData = await createProductVariantApi(
+              variantInput,
+              request,
+            );
+            console.log("ADDITIONAL VARIANT DATA", variantData);
+            const result = await User.createOrUpdate({
+              apiKey: apiKey,
+              sessionId: id,
+              additionalProductId: productId,
+              additionalProductVariantId: variantData.variants?.[0].id,
+            });
+            console.log("RESULT", result);
 
-  if (!result) {
+            if (!result) {
+              return json({
+                errors: {
+                  error_message: "Failed to creating or updating user.",
+                  error: true,
+                },
+              });
+            }
+          }
+        }
+      }
+    }
+
     return json({
       errors: {
-        error_message: "Failed to creating or updating user.",
-        error: true,
+        error_message: "Successfully updated settings.",
+        error: false,
       },
     });
   }
 
-  return redirect("/app/guides/rate/1");
+  return json({
+    errors: {
+      error_message: "Successfully updated settings.",
+      error: false,
+    },
+  });
 };
 
 export default function HubOnPage() {
   const navigation = useNavigation();
+  const navigate = useNavigate();
 
-  const loaderData = useLoaderData<typeof loader>();
-  const { hubon_web_url } = loaderData;
+  const { hubon_web_url } = useLoaderData<typeof loader>();
 
   const actionData = useActionData<typeof action>();
   const errors = actionData?.errors;
+
+  useEffect(() => {
+    if (actionData) {
+      if (!actionData.errors.error) {
+        navigate("/app/guides/rate/1");
+      }
+    }
+  }, [actionData, navigate]);
 
   const isLoading = ["loading", "submitting"].includes(navigation.state);
 

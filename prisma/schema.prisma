@@ -37,7 +37,10 @@ model hubon {
   apiKey                     String  @db.LongText
   defaultProductId           String?
   defaultProductVariantId    String?
+  additionalProductId        String?
   additionalProductVariantId String?
+  thresholdPrice             String?
+  shippingPrice              String?
 }
 
 model guide {

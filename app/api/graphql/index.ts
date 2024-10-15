@@ -2,6 +2,8 @@ import type { LocationNode, LocationResponse } from "~/types/location.type";
 import type {
   ProductInput,
   ProductNode,
+  ProductOptionResponse,
+  ProductPublicationInput,
   ProductResponse,
   ProductVariantInput,
 } from "~/types/product.type";
@@ -26,6 +28,14 @@ export async function getProductsApi(
                 id
                 name
                 handle
+                options(first: 10) {
+                  id
+                  name
+                  optionValues {
+                    id
+                    name
+                  }
+                }
                 resourcePublicationOnCurrentPublication {
                   publication {
                     name
@@ -76,6 +86,14 @@ export async function getProductApi(
             id
             title
             handle
+            options(first: 10) {
+              id
+              name
+              optionValues {
+                id
+                name
+              }
+            }
             variants(first: 10) {
               edges {
                 node {
@@ -117,7 +135,7 @@ export async function getProductApi(
     const variants = product?.variants?.edges.map(
       (edge: ProductNode) => edge.node,
     );
-    return { product: { ...product, variants: variants } };
+    return { product: product, variants: variants };
   } catch (error) {
     console.log("Failed to get product id " + id);
     throw error;
@@ -139,6 +157,14 @@ export async function createProductApi(
               id
               title
               descriptionHtml
+              options(first: 10) {
+                id
+                name
+                optionValues {
+                  id
+                  name
+                }
+              }
               media(first: 3) {
                 edges {
                   node {
@@ -203,12 +229,20 @@ export async function updateProductApi(
     const { admin } = await authenticate.admin(request);
 
     const query = `#graphql
-        mutation populateProduct($media: [CreateMediaInput!]!, $product: ProductUpdateInput!) {
-          productUpdate(media: $media, product: $product) {
+        mutation populateProduct($media: [CreateMediaInput!]!, $input: ProductInput!) {
+          productUpdate(media: $media, input: $input) {
             product {
               id
               title
               descriptionHtml
+              options(first: 10) {
+                id
+                name
+                optionValues {
+                  id
+                  name
+                }
+              }
               media(first: 3) {
                 edges {
                   node {
@@ -241,7 +275,7 @@ export async function updateProductApi(
     const response = await admin.graphql(query, {
       variables: {
         media: media,
-        product: item,
+        input: item,
       },
     });
 
@@ -306,7 +340,6 @@ export async function createProductVariantApi(
                 name
                 value
               }
-              
             }
             userErrors {
               message
@@ -461,7 +494,60 @@ export async function getLocationsApi(
   }
 }
 
-export async function publishProductApi(request: Request, productId: string) {
+export async function publishProductApi(
+  request: Request,
+  input: {
+    id: string;
+    input: ProductPublicationInput | ProductInput["productPublications"];
+  },
+) {
+  try {
+    const { id: productId, input: publications } = input;
+    const { admin } = await authenticate.admin(request);
+    const response = await admin.graphql(
+      `#graphql
+        mutation publishablePublish($id: ID!, $input: [PublicationInput!]!) {
+          publishablePublish(id: $id, input: $input) {
+            publishable {
+              availablePublicationsCount {
+                count
+              }
+              resourcePublicationsCount {
+                count
+              }
+            }
+            shop {
+              id
+              name
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }`,
+      {
+        variables: {
+          id: productId,
+          input: publications,
+        },
+      },
+    );
+
+    const data = await response.json();
+    if (!data.data) throw new Error("Failed to publish the product data.");
+    const publishProduct = data.data?.publishablePublish;
+    return publishProduct;
+  } catch (error) {
+    console.log("Failed to publish the product.");
+    throw error;
+  }
+}
+
+export async function publishProductChannelApi(
+  request: Request,
+  productId: string,
+) {
   try {
     const { admin } = await authenticate.admin(request);
     const response = await admin.graphql(
@@ -487,18 +573,18 @@ export async function publishProductApi(request: Request, productId: string) {
           }
         }`,
       {
-        variables: {
-          id: productId,
-        },
+        variables: { id: productId },
       },
     );
 
     const data = await response.json();
-    if (!data.data) throw new Error("Failed to publish the product.");
+    if (!data.data) {
+      throw new Error("Failed to publish product to current channel.");
+    }
     const publishProduct = data.data?.publishablePublishToCurrentChannel;
     return publishProduct;
   } catch (error) {
-    console.log("Failed to publish the product.");
+    console.log("Failed to publish product to current channel.");
     throw error;
   }
 }
@@ -518,8 +604,10 @@ export async function getPublicationsApi(
             edges {
               node {
                 id
+                name
                 catalog {
                   id
+                  title
                 }
               }
             }
@@ -591,6 +679,74 @@ export async function getThemesApi(
     };
   } catch (error) {
     console.log("Failed to get the themes.");
+    throw error;
+  }
+}
+
+export async function updateProductOptionsApi(
+  input: {
+    productId: string;
+    option: { id: string };
+    optionValuesToAdd?: { name: string }[];
+    optionValuesToUpdate?: { id: string; name: string }[];
+    optionValuesToDelete?: string[];
+  },
+  request: Request,
+): Promise<ProductOptionResponse> {
+  try {
+    const { admin } = await authenticate.admin(request);
+
+    const query = `#graphql
+      mutation updateOption($productId: ID!, $option: OptionUpdateInput!, $optionValuesToAdd: [OptionValueCreateInput!], $optionValuesToUpdate: [OptionValueUpdateInput!], $optionValuesToDelete: [ID!], $variantStrategy: ProductOptionUpdateVariantStrategy) {
+        productOptionUpdate(productId: $productId, option: $option, optionValuesToAdd: $optionValuesToAdd, optionValuesToUpdate: $optionValuesToUpdate, optionValuesToDelete: $optionValuesToDelete, variantStrategy: $variantStrategy) {
+          userErrors {
+            field
+            message
+            code
+          }
+          product {
+            id
+            options {
+              id
+              name
+              values
+              position
+              optionValues {
+                id
+                name
+                hasVariants
+              }
+            }
+            variants(first: 5) {
+              nodes {
+                id
+                title
+                selectedOptions {
+                  name
+                  value
+                }
+              }
+            }
+          }
+        }
+      }`;
+
+    const response = await admin.graphql(query, {
+      variables: input,
+    });
+
+    const data = await response.json();
+
+    if (!data.data) throw new Error("Failed to update the product option.");
+    const productOptionUpdate = data.data?.productOptionUpdate;
+    const variants = productOptionUpdate?.product?.variants?.nodes;
+    return {
+      ...productOptionUpdate,
+      product: { ...productOptionUpdate?.product, variants },
+      variants,
+    };
+  } catch (error) {
+    console.log("Failed to update the product option.");
     throw error;
   }
 }

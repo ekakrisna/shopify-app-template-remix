@@ -18,6 +18,31 @@ export interface ProductResponse {
   userErrors?: string[];
 }
 
+export interface ProductOptionResponse {
+  userErrors: string[];
+  product: {
+    id: string;
+    options: {
+      id: string;
+      name: string;
+      values: string[];
+      position: number;
+      optionValues: {
+        name: string;
+        hasVariants: boolean;
+      }[];
+    }[];
+    variants: {
+      id: string;
+      title: string;
+      selectedOptions: {
+        name: string;
+        value: string;
+      }[];
+    };
+  };
+}
+
 export interface ProductInput {
   id?: string;
   productId?: string;
@@ -25,6 +50,7 @@ export interface ProductInput {
   category?: string;
   status: "ACTIVE" | "DRAFT" | "ARCHIVED";
   productOptions?: ProductOptionInput[];
+  options?: ProductOptionInput[];
   descriptionHtml?: string;
   metafields?: MetafieldInput[];
   media?: MediaInput[];
@@ -39,11 +65,14 @@ export interface ProductPublicationInput {
 }
 
 export interface ProductOptionInput {
+  id?: string;
   name: string;
   values: ProductOptionInputValue[];
+  optionValues?: ProductOptionInputValue[];
 }
 
 export interface ProductOptionInputValue {
+  id?: string;
   name: string;
   position?: number;
   values?: string[];
@@ -53,7 +82,7 @@ export interface ProductOptionInputValue {
 export interface ProductVariantInput {
   productId: string;
   media?: MediaInput[];
-  variants: ProductVariant[];
+  variants?: ProductVariant[];
   strategy?: "DEFAULT" | "REMOVE_STANDALONE_VARIANT";
 }
 

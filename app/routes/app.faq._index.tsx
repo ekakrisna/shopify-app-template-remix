@@ -45,7 +45,7 @@ export default function GuidesPage() {
           <Link
             to={`${hubon_url}/accounts/integration`}
             target="_blank"
-            className="hover:underline"
+            className="underline"
           >
             letshubon.com
           </Link>
@@ -67,7 +67,7 @@ export default function GuidesPage() {
           <Link
             to={`${hubon_url}/accounts/integration`}
             target="_blank"
-            className="hover:underline"
+            className="underline"
           >
             letshubon.com
           </Link>
@@ -92,7 +92,7 @@ export default function GuidesPage() {
           <Link
             to={`${hubon_url}/accounts/integration`}
             target="_blank"
-            className="hover:underline"
+            className="underline"
           >
             letshubon.com
           </Link>
@@ -113,7 +113,7 @@ export default function GuidesPage() {
         <div className="space-y-4">
           <Text variant="bodyLg" as="p">
             You can adjust it on the theme cart URL (
-            <Link to={setting_url} target="_blank" className="hover:underline">
+            <Link to={setting_url} target="_blank" className="underline">
               here
             </Link>
             ) according to the image below.

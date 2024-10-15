@@ -1,24 +1,23 @@
 import { useLocation, useNavigate } from "@remix-run/react";
 import { Tabs } from "@shopify/polaris";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
-const Header = () => {
-  const tabs = useMemo(
-    () => [
-      { id: "home", content: "Home", url: "/app" },
-      { id: "guides", content: "Guides", url: "/app/guides" },
-      { id: "faq", content: "FAQ", url: "/app/faq" },
-      { id: "settings", content: "Settings", url: "/app/settings" },
-      // { id: "changeAccount", content: "Change Account", url: "/app/hubon" },
-    ],
-    [],
-  );
+export interface TabProps {
+  id: string;
+  content: string;
+  url: string;
+}
 
+export interface HeaderProps {
+  tabs: TabProps[];
+}
+
+const Header = ({ tabs }: HeaderProps): JSX.Element => {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { pathname } = useLocation();
 
   const selectedIndex = tabs.findIndex((tab) => {
-    const match = location.pathname.match(/^\/[^/]+\/[^/]+/);
+    const match = pathname.match(/^\/[^/]+\/[^/]+/);
     const baseUrl = match ? match[0] : null;
     return baseUrl === tab.url;
   });

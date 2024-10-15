@@ -3,7 +3,7 @@
 client_id = "9568b917669402decdb0a9edf20a1fc9"
 name = "Local - HubOn Local Pickup"
 handle = "hubon-app"
-application_url = "https://prophet-monitored-zus-enjoyed.trycloudflare.com"
+application_url = "https://multiple-phones-resort-alexandria.trycloudflare.com"
 embedded = true
 
 [build]
@@ -18,9 +18,9 @@ use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://prophet-monitored-zus-enjoyed.trycloudflare.com/auth/callback",
-  "https://prophet-monitored-zus-enjoyed.trycloudflare.com/auth/shopify/callback",
-  "https://prophet-monitored-zus-enjoyed.trycloudflare.com/api/auth/callback"
+  "https://multiple-phones-resort-alexandria.trycloudflare.com/auth/callback",
+  "https://multiple-phones-resort-alexandria.trycloudflare.com/auth/shopify/callback",
+  "https://multiple-phones-resort-alexandria.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

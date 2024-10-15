@@ -25,14 +25,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const HUBON_WEB_URL = String(process.env.HUBON_WEB_URL);
   const SHOPIFY_API_KEY = String(process.env.SHOPIFY_API_KEY);
 
+  const tabs = [
+    { id: "home", content: "Home", url: "/app" },
+    { id: "guides", content: "Guides", url: "/app/guides" },
+    { id: "faq", content: "FAQ", url: "/app/faq" },
+    { id: "settings", content: "Settings", url: "/app/settings" },
+  ];
+
+  const filters = [
+    { content: "To be paid", id: "initiated", url: "/app" },
+    { content: "Paid", id: "paid", url: "/app/paid" },
+    { content: "Failed", id: "failed", url: "/app/failed" },
+  ];
+
   return json({
     apiKey: SHOPIFY_API_KEY || "",
     hubon_web_url: HUBON_WEB_URL,
+    tabs,
+    filters,
   });
 };
 
 export default function App() {
-  const { apiKey, hubon_web_url } = useLoaderData<typeof loader>();
+  const { apiKey, hubon_web_url, tabs, filters } =
+    useLoaderData<typeof loader>();
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
@@ -45,10 +61,10 @@ export default function App() {
         <Link to="/app/settings">Settings</Link>
       </NavMenu>
 
-      <Header />
+      <Header tabs={tabs} />
 
       <div className="pt-4 pb-16 mx-auto min-h-[80vh]">
-        <Outlet />
+        <Outlet context={filters} />
       </div>
 
       <Footer hubon_web_url={hubon_web_url} />

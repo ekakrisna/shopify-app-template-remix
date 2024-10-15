@@ -1,14 +1,8 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import {
-  Link,
-  useFetcher,
-  useLoaderData,
-  useOutletContext,
-} from "@remix-run/react";
-import { Button, Page, Pagination, Spinner, Text } from "@shopify/polaris";
+import { useFetcher, useLoaderData, useOutletContext } from "@remix-run/react";
+import { Page, Pagination, Spinner, Text } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { CartIcon } from "@shopify/polaris-icons";
 import { User } from "~/models/hubon.server";
 import { getTransportApi } from "~/api/hubon";
 import { authenticateUser } from "~/helpers/authentication";
@@ -43,7 +37,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     filter: {
       page: page,
       page_size: 5,
-      filter: { states: ["initiated"] },
+      filter: { states: ["paid"] },
       sort_by: "latest",
     },
     apiKey: user.apiKey,
@@ -99,22 +93,12 @@ export default function Index() {
         <hr className="mt-2" />
       </div>
 
-      <div className="flex flex-col items-center justify-between gap-4 mb-3 sm:flex-row">
+      <div className="mb-3">
         <p className="text-gray-500">
-          There are {pagination?.total_items ?? 0} transports need{" "}
-          <span className="lowercase">To be paid</span>
+          There are {pagination?.total_items ?? 0} transports already paid
         </p>
-
-        <Link
-          to={`${hubon_web_url}/cart`}
-          target="_blank"
-          className="flex gap-2"
-        >
-          <Button icon={CartIcon} variant="primary" size="large">
-            Pay all transports ({pagination?.total_items ?? 0})
-          </Button>
-        </Link>
       </div>
+
       <div className="w-full mx-auto space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center w-full">

@@ -65,7 +65,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { error, registered_customer } = await getHubonUserApi({
       apiUrl: HUBON_API_URL,
       apiKey: user.apiKey,
-      hubonClientId: HUBON_CLIENT_ID,
+      clientId: HUBON_CLIENT_ID,
     });
 
     if (error || !registered_customer) {

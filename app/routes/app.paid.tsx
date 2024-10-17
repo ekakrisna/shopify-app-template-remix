@@ -3,7 +3,6 @@ import { json } from "@remix-run/node";
 import { useFetcher, useLoaderData, useOutletContext } from "@remix-run/react";
 import { Page, Pagination, Spinner, Text } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { User } from "~/models/hubon.server";
 import { getTransportApi } from "~/api/hubon";
 import { authenticateUser } from "~/helpers/authentication";
 import TransportDetail from "~/components/transport";
@@ -22,13 +21,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, redirect } = await authenticate.admin(request);
   const { id, shop } = session;
 
-  const user = await User.getByid(id);
   const hubonUser = await authenticateUser({
     sessionId: id,
     apiUrl: HUBON_API_URL,
     clientId: HUBON_CLIENT_ID,
   });
-  if (!user || !hubonUser) return redirect("/app/hubon");
+
+  if (!hubonUser) return redirect("/app/hubon");
+  const { user, registered_customer } = hubonUser;
+  if (!registered_customer || !user) return redirect("/app/hubon");
 
   const url = new URL(request.url);
   const page = url.searchParams.get("page") || 1;

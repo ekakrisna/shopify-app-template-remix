@@ -8,7 +8,7 @@ export interface OrderProps {
   orderId: string;
   response: string;
   payload: string;
-  createdAt: Date | string;
+  createdAt?: Date | string;
   updatedAt: Date | string;
   deletedAt?: Date | string | null;
 }

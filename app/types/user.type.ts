@@ -1,3 +1,5 @@
+import type { HubonData } from "~/models/hubon.server";
+
 export type Params = {
   apiKey: string;
   apiUrl: string;
@@ -5,6 +7,7 @@ export type Params = {
 };
 
 export interface RegisteredCustomerResponse extends ErrorDetails {
+  user: HubonData;
   registered_customer: RegisteredCustomer;
   response: {
     data: {
@@ -114,6 +117,7 @@ export interface DefaultStorageType {
 export interface ErrorDetails {
   error: boolean;
   details: Details;
+  error_message?: string;
   metadata: null;
 }
 

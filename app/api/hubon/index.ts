@@ -118,3 +118,41 @@ export const getHubDetailApi = async ({
     throw error;
   }
 };
+
+export const createTrasportApi = async ({
+  params,
+  apiKey,
+  apiUrl,
+  clientId,
+}: ParamProps): Promise<TransportResponse> => {
+  try {
+    const encodedUser = getStringBeforeDash(apiKey);
+
+    const dataSignature = {
+      method: "POST",
+      url: `${apiUrl}/external/v1/transports`,
+      body: JSON.stringify(params),
+      timestamp: String(new Date().toUTCString()),
+      apiKey: apiKey,
+    };
+
+    const generatedSignature = generateSignature(dataSignature);
+
+    const response = await fetch(`${apiUrl}/external/v1/transports`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "HubOn-Client-ID": clientId,
+        "Request-Date": dataSignature.timestamp,
+        "HubOn-Signature": generatedSignature,
+        "Encoded-User-ID": encodedUser,
+      },
+      body: JSON.stringify(params),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};

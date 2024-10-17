@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useActionData, useFetcher, useLoaderData } from "@remix-run/react";
 import {
   Banner,
   Button,
@@ -11,7 +11,7 @@ import {
   TextField,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { User } from "~/models/hubon.server";
+// import { User } from "~/models/hubon.server";
 import { authenticateUser } from "~/helpers/authentication";
 import { useEffect, useState } from "react";
 import { Order, type OrderProps } from "~/models/order.server";
@@ -21,11 +21,15 @@ import type {
   FailedOrderProps,
   HubDetails,
   HubProps,
+  ParamProps,
+  ParamsCreateTransport,
   ResponseProps,
   TransportFormProps,
 } from "~/types/transport.type";
-import type { Setting } from "~/types/user.type";
+import type { ErrorDetails, Setting } from "~/types/user.type";
 import { getRelevantDates } from "~/helpers/date";
+import { createTrasportApi } from "~/api/hubon";
+import { useAppBridge } from "@shopify/app-bridge-react";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const HUBON_CLIENT_ID = String(process.env.HUBON_CLIENT_ID);
@@ -33,13 +37,15 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session, redirect } = await authenticate.admin(request);
   const { id } = session;
 
-  const user = await User.getByid(id);
   const hubon = await authenticateUser({
     sessionId: id,
     apiUrl: HUBON_API_URL,
     clientId: HUBON_CLIENT_ID,
   });
-  if (!user || !hubon?.registered_customer) return redirect("/app/hubon");
+  if (!hubon) return redirect("/app/hubon");
+
+  const { registered_customer } = hubon;
+  if (!registered_customer) return redirect("/app/hubon");
 
   const order_id = params.id;
   const where = { deletedAt: null, sessionId: id, id: Number(order_id) };
@@ -52,8 +58,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   };
 
   if (result) {
-    const hubonUser = hubon.registered_customer;
-    const setting = hubonUser.setting;
+    const setting = registered_customer.setting;
     const payload = result.payload ? JSON.parse(result.payload) : {};
     const response = result.response ? JSON.parse(result.response) : {};
     data = { payload, response, setting };
@@ -62,44 +67,102 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   return json({ initial_value: data, result });
 };
 
-export async function action({ request }: ActionFunctionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
+  const HUBON_CLIENT_ID = String(process.env.HUBON_CLIENT_ID);
+  const HUBON_API_URL = String(process.env.HUBON_API_URL);
+
   const { redirect, session } = await authenticate.admin(request);
   const { id } = session;
+
+  const order_id = params.id;
+  console.log("ORDER PARAM ID", order_id);
+  // const where = { deletedAt: null, sessionId: id, id: Number(order_id) };
+  // const result = await Order.getById(where);
+
   const formData = await request.formData();
-  console.log(formData);
-  // const isButtonBuy = formData.get("isButtonBuy") === "true" ? true : false;
-  // const createGuide = await Guide.createOrUpdate({
-  //   sessionId: id,
-  //   isButtonBuy: isButtonBuy,
-  // });
-  // if (createGuide?.id) return redirect("/app/guides");
+  const { order_id: orderId, ...transport }: Partial<ParamsCreateTransport> =
+    Object.fromEntries(formData.entries());
+
+  console.log("ORDER SHOPIFY ID", orderId);
+
+  const hubon = await authenticateUser({
+    sessionId: id,
+    apiUrl: HUBON_API_URL,
+    clientId: HUBON_CLIENT_ID,
+  });
+
+  if (!hubon) return redirect("/app/hubon");
+
+  const { user } = hubon;
+  if (!user) return redirect("/app/hubon");
+
+  const data: ParamProps = {
+    params: transport as ParamsCreateTransport,
+    apiUrl: HUBON_API_URL,
+    clientId: HUBON_CLIENT_ID,
+    apiKey: user.apiKey,
+  };
+
+  console.log("DATA", data);
+
+  const createTransport = await createTrasportApi(data);
+  if (createTransport.transport.id && orderId) {
+    const updateOrder = await Order.createOrUpdate({
+      id: Number(order_id),
+      sessionId: id,
+      payload: JSON.stringify(transport),
+      response: JSON.stringify({}),
+      status: "SUCCESS",
+      orderId: orderId,
+      updatedAt: new Date(),
+      deletedAt: new Date(),
+    });
+    if (updateOrder?.id) return redirect("/app/failed");
+  }
+
   return json({
     errors: {
       error: true,
-      error_message: "An error occurred while updating the guide",
+      error_message: "An error occurred while updating the order",
     },
   });
 }
 
 export default function FailedPage() {
+  const shopify = useAppBridge();
   const { initial_value, result } = useLoaderData<{
     initial_value: FailedOrderProps;
     result: OrderProps;
     setting: Setting;
   }>();
+  const actionData = useActionData<typeof action>();
   const { payload: pay, response, setting } = initial_value;
-  const { Form, state, data, load } = useFetcher<{ hubs: HubProps[] }>();
+  const { Form, state, data, formMethod, load } = useFetcher<{
+    hubs: HubProps[];
+    errors?: ErrorDetails;
+  }>();
   const fetcher = useFetcher<{ settings: HubDetails }>();
   const [options, setOptions] = useState<HubProps[]>([]);
   const [disabledDate, setDisableDate] = useState<Date[]>([]);
+
+  const isLoading =
+    ["loading", "submitting"].includes(state) && formMethod === "POST";
+
   const [payload, setPayload] = useState<TransportFormProps>(pay);
 
-  const handleSearchHub = (value: string) => {
-    const url = `/api/hubs?search=${value}&myshopifyDomain=${result?.sessionId}`;
-    if (value.length > 3) {
-      load(url);
+  const errors = actionData?.errors || data?.errors;
+
+  useEffect(() => {
+    if (errors) {
+      if (!errors?.error) {
+        shopify.toast.show(errors?.error_message || "");
+      } else {
+        shopify.toast.show(errors?.error_message || "", {
+          isError: errors.error,
+        });
+      }
     }
-  };
+  }, [errors, shopify]);
 
   useEffect(() => {
     const urlSetting = `/api/settings?hubId=${payload?.destination_hub_id}&myshopifyDomain=${result?.sessionId}`;
@@ -118,9 +181,16 @@ export default function FailedPage() {
     if (data && data.hubs) setOptions(data.hubs);
   }, [load, payload, result, data, state]);
 
-  const handleDateChange = (value: string) => {
-    console.log(`Date selected: ${value}`);
+  const handleSearchHub = (value: string) => {
+    const url = `/api/hubs?search=${value}&myshopifyDomain=${result?.sessionId}`;
+    if (value.length > 3) {
+      load(url);
+    }
   };
+
+  // const handleDateChange = (value: string) => {
+  //   console.log(`Date selected: ${value}`);
+  // };
 
   const handleMonthChange = (month: number, year: number) => {
     if (fetcher.data && fetcher.data.settings) {
@@ -134,7 +204,11 @@ export default function FailedPage() {
   };
 
   const handleSelectHub = (selected: string) => {
-    setPayload({ ...payload, destination_hub_id: Number(selected) });
+    setPayload({
+      ...payload,
+      destination_hub_id: Number(selected),
+      pickup_date: "",
+    });
     const url = `/api/settings?hubId=${selected}&myshopifyDomain=${result?.sessionId}`;
     fetcher.load(url);
   };
@@ -194,6 +268,7 @@ export default function FailedPage() {
               value={payload.recipient_phone_number}
             />
           </FormLayout.Group>
+          <input type="text" name="order_id" hidden value={result?.orderId} />
           <input
             type="text"
             name="destination_hub_id"
@@ -243,7 +318,7 @@ export default function FailedPage() {
               label="Select a date"
               name="pickup_date"
               initialValue={payload.pickup_date}
-              onChange={handleDateChange}
+              // onChange={handleDateChange}
               disableDatesBefore={new Date()}
               disableSpecificDates={disabledDate}
               onMonthChange={handleMonthChange}
@@ -264,15 +339,14 @@ export default function FailedPage() {
             <Button
               submit
               variant="primary"
-              // loading={isLoading}
-              // disabled={isLoading}
+              loading={isLoading}
+              disabled={isLoading}
             >
               Submit
             </Button>
           </div>
         </Form>
       </Card>
-      {/* </div> */}
     </Page>
   );
 }

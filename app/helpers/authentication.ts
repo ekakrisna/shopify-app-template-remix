@@ -22,6 +22,10 @@ export async function authenticateUser({
       clientId: clientId,
     });
     if (!getUserHubonApi.registered_customer) return null;
-    return getUserHubonApi;
+    return {
+      registered_customer: getUserHubonApi.registered_customer,
+      user: user,
+      response: getUserHubonApi.response,
+    };
   }
 }

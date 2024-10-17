@@ -7,6 +7,23 @@ export interface ParamProps {
   apiKey: string;
   apiUrl: string;
   clientId: string;
+  params?: ParamsCreateTransport;
+}
+
+export interface ParamsCreateTransport {
+  payer_type: string;
+  recipient_phone_number: string;
+  recipient_name: string;
+  origin_hub_id?: number;
+  destination_hub_id: number;
+  quantity: number;
+  category_id: number;
+  hub_storage_type_id: number;
+  drop_off_at?: string;
+  pickup_date?: string;
+  sender_memo?: string;
+  sender_images?: string[];
+  order_id?: string;
 }
 
 export interface HubDetails {

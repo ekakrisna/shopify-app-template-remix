@@ -53,7 +53,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 };
 
-export default function Index() {
+export default function PaidPage() {
   const filters = useOutletContext<TabProps[]>();
 
   const { hubon_web_url, transports, hubon_user, shop } =
@@ -95,7 +95,7 @@ export default function Index() {
 
       <div className="mb-3">
         <p className="text-gray-500">
-          There are {pagination?.total_items ?? 0} transports already paid
+          There are {pagination?.total_items || 0} transports already paid
         </p>
       </div>
 
@@ -120,11 +120,16 @@ export default function Index() {
               <div className="float-right my-4">
                 <Pagination
                   type="table"
-                  hasPrevious={pagination.prev_page < 0}
+                  hasPrevious={
+                    !!pagination.prev_page && pagination.prev_page > 0
+                  }
                   onPrevious={() =>
                     handlePageChange(pagination.current_page - 1)
                   }
-                  hasNext={pagination.next_page > 0}
+                  hasNext={
+                    !!pagination.next_page &&
+                    pagination.next_page < pagination.total_pages
+                  }
                   onNext={() => handlePageChange(pagination.current_page + 1)}
                   label={`${pagination.current_page}-${pagination.total_pages} of ${pagination.total_items} transports`}
                 />

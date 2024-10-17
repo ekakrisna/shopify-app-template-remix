@@ -32,7 +32,18 @@ export function extractValueAfterOrderId(text: string): string | null {
   return text;
 }
 
-export function formatDate(inputDate: string): string {
+// export function formatDate(inputDate: string): string {
+//   const options: Intl.DateTimeFormatOptions = {
+//     weekday: "short",
+//     year: "numeric",
+//     month: "long",
+//     day: "numeric",
+//   };
+//   const date = new Date(inputDate);
+//   return date.toLocaleDateString("en-US", options);
+// }
+
+export function formatDate(inputDate: string): string | null {
   const options: Intl.DateTimeFormatOptions = {
     weekday: "short",
     year: "numeric",
@@ -40,6 +51,7 @@ export function formatDate(inputDate: string): string {
     day: "numeric",
   };
   const date = new Date(inputDate);
+  if (isNaN(date.getTime())) return null;
   return date.toLocaleDateString("en-US", options);
 }
 
@@ -62,4 +74,19 @@ export const handleUrlOrder = (domain: string, transport: TransportProps) => {
   } else {
     return `https://${domain}/admin/orders`;
   }
+};
+
+export const formatPhoneNumber = (
+  phoneNumberString?: string | null,
+): string => {
+  if (!phoneNumberString) return "";
+  const cleaned: string = phoneNumberString.replace(/\D/g, "");
+  const match: RegExpMatchArray | null = cleaned.match(
+    /^(1|)?(\d{3})(\d{3})(\d{4})|(\d{4})$/,
+  );
+  if (match) {
+    const intlCode: string = match[1] ? "+1 " : "";
+    return [intlCode, "(", match[2], ") ", match[3], " - ", match[4]].join("");
+  }
+  return "";
 };

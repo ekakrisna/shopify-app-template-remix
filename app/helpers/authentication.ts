@@ -1,5 +1,6 @@
 import { getHubonUserApi } from "~/api/hubon";
 import { User } from "~/models/hubon.server";
+import type { RegisteredCustomerResponse } from "~/types/user.type";
 
 interface AuthenticateProps {
   sessionId: string;
@@ -11,7 +12,7 @@ export async function authenticateUser({
   sessionId,
   apiUrl,
   clientId,
-}: AuthenticateProps) {
+}: AuthenticateProps): Promise<Partial<RegisteredCustomerResponse | null>> {
   const user = await User.getByid(sessionId);
   if (!user) return null;
   else {

@@ -59,7 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 };
 
-export default function Index() {
+export default function ToBePaidPage() {
   const filters = useOutletContext<TabProps[]>();
 
   const { hubon_web_url, transports, hubon_user, shop } =
@@ -101,7 +101,7 @@ export default function Index() {
 
       <div className="flex flex-col items-center justify-between gap-4 mb-3 sm:flex-row">
         <p className="text-gray-500">
-          There are {pagination?.total_items ?? 0} transports need{" "}
+          There are {pagination?.total_items || 0} transports need{" "}
           <span className="lowercase">To be paid</span>
         </p>
 
@@ -111,7 +111,7 @@ export default function Index() {
           className="flex gap-2"
         >
           <Button icon={CartIcon} variant="primary" size="large">
-            Pay all transports ({pagination?.total_items ?? 0})
+            Pay all transports {"(" + (pagination?.total_items || 0) + ")"}
           </Button>
         </Link>
       </div>
@@ -136,11 +136,16 @@ export default function Index() {
               <div className="float-right my-4">
                 <Pagination
                   type="table"
-                  hasPrevious={pagination.prev_page < 0}
+                  hasPrevious={
+                    !!pagination.prev_page && pagination.prev_page > 0
+                  }
                   onPrevious={() =>
                     handlePageChange(pagination.current_page - 1)
                   }
-                  hasNext={pagination.next_page > 0}
+                  hasNext={
+                    !!pagination.next_page &&
+                    pagination.next_page < pagination.total_pages
+                  }
                   onNext={() => handlePageChange(pagination.current_page + 1)}
                   label={`${pagination.current_page}-${pagination.total_pages} of ${pagination.total_items} transports`}
                 />

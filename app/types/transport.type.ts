@@ -1,17 +1,30 @@
-export interface GetTransportApiParams {
-  filter: Filter;
+import type { Setting } from "./user.type";
+
+export interface ParamProps {
+  id?: string;
+  search?: string;
+  filter?: Filter;
   apiKey: string;
   apiUrl: string;
   clientId: string;
 }
 
+export interface HubDetails {
+  cutoff_date: number;
+  pickup_days: number[];
+  holiday_infos: string[];
+  hub_hours: number[];
+}
+
 export interface Filter {
-  page: number | string;
-  page_size: number | string;
-  filter: {
+  page?: number | string;
+  page_size?: number | string;
+  filter?: {
     states: string[];
   };
-  sort_by: string;
+  sort_by?: string;
+  category?: string;
+  storage_types?: string[];
 }
 
 export type FilterState = {
@@ -126,10 +139,10 @@ export type HubSequencesProps = {
 
 export type MetaResponse = {
   current_page: number;
-  next_page: number;
-  prev_page: number;
+  next_page: number | null;
+  prev_page: number | null;
   total_pages: number;
-  total_items: string;
+  total_items: number;
   page_size: number;
 };
 
@@ -220,3 +233,52 @@ export type CategoryProps = {
   is_tracking_visible: string;
   delete_id?: string;
 };
+
+export interface TransportFormProps {
+  sender_id: number;
+  initiator_type: string;
+  payer_type: string;
+  recipient_phone_number: string;
+  recipient_name: string;
+  destination_hub_id: number;
+  quantity: number;
+  category_id: number;
+  hub_storage_type_id: number;
+  sender_memo: string;
+  pickup_date: string;
+  status: string;
+  orderId: string;
+}
+
+export interface ResponseProps {
+  error: boolean;
+  details: Details;
+}
+
+export interface Details {
+  message: string;
+}
+
+export interface FullAddress {
+  first_name: null;
+  address1: string;
+  phone: string;
+  city: string;
+  zip: string;
+  province: string;
+  country: string;
+  last_name: string;
+  address2: null;
+  company: null;
+  latitude: number;
+  longitude: number;
+  name: string;
+  country_code: string;
+  province_code: string;
+}
+
+export interface FailedOrderProps {
+  payload: TransportFormProps;
+  response: ResponseProps;
+  setting: Setting;
+}

@@ -443,6 +443,96 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         error: false,
       },
     });
+  } else {
+    productInput.media = [
+      {
+        alt: HUBON_PRODUCT_NAME,
+        mediaContentType: "IMAGE",
+        originalSource: MEDIA_SRC,
+      },
+    ];
+    productInput.productOptions = [
+      {
+        name: "Note",
+        values: [{ name: "Pick up from a hub near you." }],
+      },
+    ];
+    console.log("PRODUCT INPUT", productInput);
+
+    console.log("CREATING DEFAULT PRODUCT");
+    const productData = await createProductApi(productInput, request);
+    console.log("CREATING DEFAULT DONE");
+    console.log("DEFAULT PRODUCT DATA", productData);
+    const productId = productData.product?.id;
+    const variants = productData.variants;
+
+    if (productId) {
+      const publishProduct = await publishProductApi(request, {
+        id: productId,
+        input: publications.map((item) => ({ publicationId: item.id })),
+      });
+      console.log("DEFAULT PUBLISH PRODUCT", publishProduct);
+
+      if (variants?.length) {
+        console.log("CREATING DEFAULT VARIANT");
+        const variantInput: ProductVariantInput = {
+          media: [
+            {
+              alt: HUBON_PRODUCT_NAME,
+              mediaContentType: "IMAGE",
+              originalSource: MEDIA_SRC,
+            },
+          ],
+          productId: productId,
+          strategy: "REMOVE_STANDALONE_VARIANT",
+          variants: [
+            {
+              optionValues: [
+                {
+                  name: "Pick up from a hub near you.",
+                  optionName: "Note",
+                },
+              ],
+              compareAtPrice: setting.external_unit_price,
+              price: setting.external_unit_price,
+              barcode: HUBON_CLIENT_ID.toString(),
+              mediaSrc: MEDIA_SRC,
+              inventoryPolicy: "CONTINUE",
+              inventoryItem: {
+                cost: setting.external_unit_price,
+                countryCodeOfOrigin: "US",
+                measurement: {
+                  weight: {
+                    unit: "KILOGRAMS",
+                    value: 96000,
+                  },
+                },
+                requiresShipping: true,
+                sku: HUBON_CLIENT_ID.toString(),
+                tracked: true,
+              },
+              inventoryQuantities: locations.map((location: Location) => ({
+                availableQuantity: 99999,
+                locationId: location.id,
+              })),
+            },
+          ],
+        };
+        console.log("DEFAULT VARIANT INPUT", variantInput);
+        const variantData = await createProductVariantApi(
+          variantInput,
+          request,
+        );
+        console.log("DEFAULT VARIANT DATA", variantData);
+        const result = await User.createOrUpdate({
+          apiKey: apiKey,
+          sessionId: id,
+          defaultProductId: productId,
+          defaultProductVariantId: variantData.variants?.[0].id,
+        });
+        console.log("RESULT", result);
+      }
+    }
   }
 
   return json({

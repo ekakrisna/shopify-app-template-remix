@@ -1,46 +1,32 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "9568b917669402decdb0a9edf20a1fc9"
-name = "Local - HubOn Local Pickup"
-handle = "hubon-app"
-application_url = "https://multiple-phones-resort-alexandria.trycloudflare.com"
+client_id = "c548eac429206c9553a0f43be2ceb63e"
+name = "HubOn Local Pickup"
+handle = "hubon-local-pickup"
+application_url = "https://localpickup.letshubon.com/"
 embedded = true
 
 [build]
-automatically_update_urls_on_dev = true
-dev_store_url = "hubondemodev2.myshopify.com"
-include_config_on_deploy = true
+automatically_update_urls_on_dev = false
+dev_store_url = "hubondemoprod1.myshopify.com"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_orders,read_product_listings,read_products,read_themes,write_metaobject_definitions,write_metaobjects,write_orders,write_products"
-use_legacy_install_flow = true
+scopes = "read_locations,read_orders,read_product_listings,read_products,read_themes,write_metaobject_definitions,write_metaobjects,write_orders,write_products,write_publications"
 
 [auth]
 redirect_urls = [
-  "https://multiple-phones-resort-alexandria.trycloudflare.com/auth/callback",
-  "https://multiple-phones-resort-alexandria.trycloudflare.com/auth/shopify/callback",
-  "https://multiple-phones-resort-alexandria.trycloudflare.com/api/auth/callback"
+  "https://localpickup.letshubon.com/auth/callback",
+  "https://localpickup.letshubon.com/api/auth/callback",
+  "https://localpickup.letshubon.com/auth/shopify/callback"
 ]
 
 [webhooks]
 api_version = "2024-07"
 
   [[webhooks.subscriptions]]
-  uri = "/webhooks/customers/data_request"
-  compliance_topics = [ "customers/data_request" ]
-
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/customers/redact"
-  compliance_topics = [ "customers/redact" ]
-
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/shop/redact"
-  compliance_topics = [ "shop/redact" ]
-
-  [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+  uri = "/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [pos]
 embedded = false

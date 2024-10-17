@@ -1,14 +1,11 @@
 import qs from "qs";
 import { generateSignature, getStringBeforeDash } from "~/helpers/hubon";
 import type {
-  GetTransportApiParams,
+  ParamProps,
+  HubProps,
   TransportResponse,
 } from "~/types/transport.type";
-import type {
-  Params,
-  RegisteredCustomer,
-  RegisteredCustomerResponse,
-} from "~/types/user.type";
+import type { Params, RegisteredCustomerResponse } from "~/types/user.type";
 
 export const getHubonUserApi = async ({
   apiKey,
@@ -40,15 +37,7 @@ export const getHubonUserApi = async ({
     const data = await response.json();
     return data;
   } catch (error) {
-    return {
-      registered_customer: {} as RegisteredCustomer,
-      response: {
-        data: {
-          error: true,
-          message: "An unknown error occurred",
-        },
-      },
-    };
+    throw error;
   }
 };
 
@@ -57,7 +46,7 @@ export const getTransportApi = async ({
   apiKey,
   apiUrl,
   clientId,
-}: GetTransportApiParams): Promise<TransportResponse> => {
+}: ParamProps): Promise<TransportResponse> => {
   try {
     const encodedUser = getStringBeforeDash(apiKey);
     const dataSignature = {
@@ -86,6 +75,46 @@ export const getTransportApi = async ({
     const data = await response.json();
     return data;
   } catch (error: any) {
-    return error;
+    throw error;
+  }
+};
+
+export const getHubsApi = async ({
+  search,
+  filter,
+  apiUrl,
+}: ParamProps): Promise<{ hubs: HubProps[] }> => {
+  try {
+    const url = `${apiUrl}/external/v1/hubs?${qs.stringify({ search, ...filter }, { arrayFormat: "brackets" })}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+export const getHubDetailApi = async ({
+  apiUrl,
+  id,
+}: ParamProps): Promise<{ hub: HubProps }> => {
+  try {
+    const url = `${apiUrl}/api/v1/hubs/${id}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    throw error;
   }
 };

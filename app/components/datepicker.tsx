@@ -15,6 +15,7 @@ interface DatePickerInputProps {
   disableSpecificDates?: Date[];
   onMonthChange?: (month: number, year: number) => void;
   loading?: boolean;
+  error?: string;
 }
 
 const DatePickerInput: React.FC<DatePickerInputProps> = ({
@@ -28,6 +29,7 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
   disableSpecificDates,
   onMonthChange,
   loading = false,
+  error,
 }) => {
   // console.log("DISABLESPECIFICDATES", disableSpecificDates);
   // const [disabledDates, setDisableDates] = useState<Date[] | undefined>(
@@ -133,6 +135,7 @@ const DatePickerInput: React.FC<DatePickerInputProps> = ({
           placeholder={placeholder}
           autoComplete="off"
           name={name}
+          error={error}
         />
       }
     >

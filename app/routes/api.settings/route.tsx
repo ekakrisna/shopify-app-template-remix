@@ -79,10 +79,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       holiday_infos = (getHubDetail.hub.holiday_infos || []).map(
         (item) => item.date,
       );
-      hub_hours = (getHubDetail.hub.hub_hours || []).map(
-        (item) =>
-          weekdaysMap[item.day.toLowerCase() as keyof typeof weekdaysMap],
-      );
+
+      hub_hours = (getHubDetail.hub.hub_hours || [])
+        .filter((item) => item.open_hour !== null && item.close_hour !== null)
+        .map((item) => weekdaysMap[item.day as keyof typeof weekdaysMap]);
     }
   }
 

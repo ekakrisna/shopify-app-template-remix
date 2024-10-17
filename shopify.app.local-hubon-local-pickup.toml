@@ -3,7 +3,7 @@
 client_id = "9568b917669402decdb0a9edf20a1fc9"
 name = "Local - HubOn Local Pickup"
 handle = "hubon-app"
-application_url = "https://lottery-statewide-temple-cooler.trycloudflare.com"
+application_url = "https://head-hampshire-zone-asks.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,9 +17,9 @@ scopes = "read_locations,read_orders,read_product_listings,read_products,read_th
 
 [auth]
 redirect_urls = [
-  "https://lottery-statewide-temple-cooler.trycloudflare.com/auth/callback",
-  "https://lottery-statewide-temple-cooler.trycloudflare.com/auth/shopify/callback",
-  "https://lottery-statewide-temple-cooler.trycloudflare.com/api/auth/callback"
+  "https://head-hampshire-zone-asks.trycloudflare.com/auth/callback",
+  "https://head-hampshire-zone-asks.trycloudflare.com/auth/shopify/callback",
+  "https://head-hampshire-zone-asks.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]

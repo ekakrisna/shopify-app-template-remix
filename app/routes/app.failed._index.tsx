@@ -98,6 +98,11 @@ export default function FailedPage() {
   const rowMarkup = filteredData.map((order, index) => (
     <IndexTable.Row id={order.id.toString()} key={order.id} position={index}>
       <IndexTable.Cell>
+        <Text variant="bodyMd" fontWeight="bold" as="span">
+          {index}
+        </Text>
+      </IndexTable.Cell>
+      <IndexTable.Cell>
         <Link to={`${order_url}${order.orderId}`} className="hover:underline">
           <Text variant="bodyMd" fontWeight="bold" as="span">
             {order.orderId}

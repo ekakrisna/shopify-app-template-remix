@@ -4,6 +4,8 @@ import type {
   ParamProps,
   HubProps,
   TransportResponse,
+  TransportProps,
+  MetaResponse,
 } from "~/types/transport.type";
 import type { Params, RegisteredCustomerResponse } from "~/types/user.type";
 
@@ -151,8 +153,17 @@ export const createTrasportApi = async ({
     });
 
     const data = await response.json();
+    if (data.error)
+      return {
+        meta: {} as MetaResponse,
+        transport: {} as TransportProps,
+        transports: [],
+        errors: { ...data, errors: {} },
+      };
+    console.log("DATA", data);
     return data;
   } catch (error) {
+    console.log("ERROR", error);
     throw error;
   }
 };

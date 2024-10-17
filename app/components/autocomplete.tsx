@@ -19,6 +19,7 @@ interface AutocompleteComponentProps {
   labelRenderer?: (option: Option) => React.ReactNode; // Custom label rendering
   loading?: boolean;
   name?: string;
+  error?: string;
 }
 
 const AutocompleteComponent: React.FC<AutocompleteComponentProps> = ({
@@ -31,6 +32,7 @@ const AutocompleteComponent: React.FC<AutocompleteComponentProps> = ({
   labelRenderer, // Custom renderer for label display
   loading = false,
   name,
+  error,
 }) => {
   const [inputValue, setInputValue] = useState<string>(selectedValue);
   const [filteredOptions, setFilteredOptions] = useState<Option[]>(options);
@@ -102,6 +104,7 @@ const AutocompleteComponent: React.FC<AutocompleteComponentProps> = ({
       autoComplete="off"
       loading={loading}
       name={name}
+      error={error}
     />
   );
 

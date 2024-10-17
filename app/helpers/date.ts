@@ -25,14 +25,21 @@ function getCutoffDates(cutoff_date: number): Date[] {
  * @returns An array of unique days.
  */
 function getUniqueDays(pickup_days: number[], hub_hours: number[]): number[] {
+  const weekdaysMap = [0, 1, 2, 3, 4, 5, 6]; // Full week (0 = Sunday, 1 = Monday, etc.)
+
   // Dapatkan elemen yang hanya ada di array1
-  let array1 = pickup_days.filter((value) => !hub_hours.includes(value));
+  const array1 = pickup_days.filter((value) => !hub_hours.includes(value));
 
   // Dapatkan elemen yang hanya ada di array2
-  let array2 = hub_hours.filter((value) => !pickup_days.includes(value));
+  const array2 = hub_hours.filter((value) => !pickup_days.includes(value));
 
+  const array3 = weekdaysMap.filter(
+    (day) => !(pickup_days.includes(day) && hub_hours.includes(day)),
+  );
   // Gabungkan kedua hasil
-  let result = array1.concat(array2);
+  const result = [...new Set([...array1, ...array2, ...array3])];
+
+  // const result = array1.concat(array2).concat(array3);
   return result;
 }
 
@@ -112,20 +119,22 @@ export function getRelevantDates(
     new Set(allDates.map((date) => date.toISOString())),
   ).map((date) => new Date(date));
 
+  // console.log("All Dates:", allDates);
+
   // console.log("Unique Dates:", uniqueDates);
   return uniqueDates;
 }
 
-//   // Example usage:
-const data: HubDetails = {
-  cutoff_date: 4,
-  pickup_days: [0, 2, 4, 5, 6], // Sunday, Tuesday, Thursday, Friday, Saturday
-  holiday_infos: ["2024-10-23", "2024-10-25", "2024-10-29"],
-  hub_hours: [1, 3, 5], // Days (1 = Monday, 3 = Wednesday, 5 = Friday)
-};
+// Example usage:
+// const data: HubDetails = {
+//   cutoff_date: 4,
+//   pickup_days: [0, 2, 4, 5, 6], // Sunday, Tuesday, Thursday, Friday, Saturday
+//   holiday_infos: ["2024-10-23", "2024-10-25", "2024-10-29"],
+//   hub_hours: [1, 3, 5], // Days (1 = Monday, 3 = Wednesday, 5 = Friday)
+// };
 
-const relevantDates = getRelevantDates(data);
-console.log(relevantDates);
+// const relevantDates = getRelevantDates(data);
+// console.log(relevantDates);
 // console.log("Cutoff Date:", relevantDates.cutoffDate);
 // console.log("Pickup Dates:", relevantDates.pickupDates);
 // console.log("Holidays:", relevantDates.holidays);

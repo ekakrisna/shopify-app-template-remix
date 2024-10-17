@@ -6,8 +6,8 @@ export interface OrderProps {
   sessionId: string;
   status: "FAILED" | "SUCCESS";
   orderId: string;
-  response: string;
-  payload: string;
+  response?: string | null;
+  payload?: string | null;
   createdAt?: Date | string;
   updatedAt: Date | string;
   deletedAt?: Date | string | null;

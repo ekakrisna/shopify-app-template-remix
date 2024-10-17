@@ -35,7 +35,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   if (!hubonUser) return redirect("/app/hubon");
   const { user, registered_customer } = hubonUser;
-  if (!user || registered_customer) return redirect("/app/hubon");
+  if (!user || !registered_customer) return redirect("/app/hubon");
 
   const url = new URL(request.url);
   const page = url.searchParams.get("page") || 1;

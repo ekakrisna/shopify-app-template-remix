@@ -560,7 +560,9 @@ export default function HubOnPage() {
     }
   }, [actionData, navigate]);
 
-  const isLoading = ["loading", "submitting"].includes(navigation.state);
+  const isLoading =
+    ["loading", "submitting"].includes(navigation.state) &&
+    navigation.formMethod === "POST";
 
   const [value, setValue] = useState<string>("");
 

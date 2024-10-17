@@ -30,6 +30,7 @@ import type { ErrorDetails, Setting } from "~/types/user.type";
 import { getRelevantDates } from "~/helpers/date";
 import { createTrasportApi } from "~/api/hubon";
 import { useAppBridge } from "@shopify/app-bridge-react";
+import { validateTransport } from "~/helpers/validation";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const HUBON_CLIENT_ID = String(process.env.HUBON_CLIENT_ID);
@@ -74,16 +75,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const { redirect, session } = await authenticate.admin(request);
   const { id } = session;
 
-  const order_id = params.id;
+  const order_id = Number(params.id);
   console.log("ORDER PARAM ID", order_id);
   // const where = { deletedAt: null, sessionId: id, id: Number(order_id) };
   // const result = await Order.getById(where);
-
-  const formData = await request.formData();
-  const { order_id: orderId, ...transport }: Partial<ParamsCreateTransport> =
-    Object.fromEntries(formData.entries());
-
-  console.log("ORDER SHOPIFY ID", orderId);
 
   const hubon = await authenticateUser({
     sessionId: id,
@@ -96,8 +91,30 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const { user } = hubon;
   if (!user) return redirect("/app/hubon");
 
-  const data: ParamProps = {
-    params: transport as ParamsCreateTransport,
+  const formData = await request.formData();
+  const data: ParamsCreateTransport = {} as ParamsCreateTransport;
+  data.payer_type = formData.get("payer_type")?.toString() || "";
+  data.recipient_phone_number =
+    formData.get("recipient_phone_number")?.toString() || "";
+  data.recipient_name = formData.get("recipient_name")?.toString() || "";
+  data.destination_hub_id = Number(formData.get("destination_hub_id"));
+  data.quantity = Number(formData.get("quantity"));
+  data.category_id = Number(formData.get("category_id"));
+  data.hub_storage_type_id = Number(formData.get("hub_storage_type_id"));
+  data.pickup_date = formData.get("pickup_date")?.toString() || "";
+  data.sender_memo = formData.get("sender_memo")?.toString() || "";
+
+  const orderId = formData.get("order_id")?.toString() || ""; // shopify order id
+
+  const validate = validateTransport(data);
+  console.log("VALIDATE", validate);
+
+  if (validate) return json({ errors: validate });
+
+  console.log("ORDER SHOPIFY ID", orderId);
+
+  const payload: ParamProps = {
+    params: data,
     apiUrl: HUBON_API_URL,
     clientId: HUBON_CLIENT_ID,
     apiKey: user.apiKey,
@@ -105,19 +122,22 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   console.log("DATA", data);
 
-  const createTransport = await createTrasportApi(data);
-  if (createTransport.transport.id && orderId) {
+  const createTransport = await createTrasportApi(payload);
+  console.log("CREATE TRANSPORT", createTransport);
+  if (createTransport.transport.id) {
     const updateOrder = await Order.createOrUpdate({
-      id: Number(order_id),
+      id: order_id,
       sessionId: id,
-      payload: JSON.stringify(transport),
-      response: JSON.stringify({}),
+      payload: JSON.stringify(data),
       status: "SUCCESS",
       orderId: orderId,
       updatedAt: new Date(),
       deletedAt: new Date(),
     });
-    if (updateOrder?.id) return redirect("/app/failed");
+    if (updateOrder.id) return redirect("/app/failed");
+  } else {
+    const errors = createTransport.errors;
+    return json({ errors });
   }
 
   return json({
@@ -135,7 +155,7 @@ export default function FailedPage() {
     result: OrderProps;
     setting: Setting;
   }>();
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<{ errors?: ErrorDetails }>();
   const { payload: pay, response, setting } = initial_value;
   const { Form, state, data, formMethod, load } = useFetcher<{
     hubs: HubProps[];
@@ -156,10 +176,14 @@ export default function FailedPage() {
     if (errors) {
       if (!errors?.error) {
         shopify.toast.show(errors?.error_message || "");
-      } else {
-        shopify.toast.show(errors?.error_message || "", {
-          isError: errors.error,
-        });
+      }
+      if (errors?.error && (errors?.error_message || errors.details.message)) {
+        shopify.toast.show(
+          errors?.error_message || errors.details.message || "",
+          {
+            isError: errors.error,
+          },
+        );
       }
     }
   }, [errors, shopify]);
@@ -186,6 +210,7 @@ export default function FailedPage() {
     if (value.length > 3) {
       load(url);
     }
+    setPayload({ ...payload, destination_hub_id: 0 });
   };
 
   // const handleDateChange = (value: string) => {
@@ -253,6 +278,7 @@ export default function FailedPage() {
               autoComplete="off"
               value={payload.recipient_name}
               placeholder="Input recipient name"
+              error={errors && errors.error ? errors.errors.recipient_name : ""}
             />
             <TextField
               name="recipient_phone_number"
@@ -266,34 +292,49 @@ export default function FailedPage() {
               autoComplete="off"
               placeholder="Input recipient phone number"
               value={payload.recipient_phone_number}
+              error={
+                errors && errors.error
+                  ? errors.errors.recipient_phone_number
+                  : ""
+              }
             />
           </FormLayout.Group>
-          <input type="text" name="order_id" hidden value={result?.orderId} />
+          <input
+            type="text"
+            name="order_id"
+            defaultValue={result?.orderId}
+            hidden
+          />
           <input
             type="text"
             name="destination_hub_id"
             hidden
-            value={payload.destination_hub_id}
+            defaultValue={payload.destination_hub_id}
           />
           <input
             type="text"
             name="category_id"
             hidden
-            value={setting.default_category.id}
+            defaultValue={setting.default_category.id}
           />
           <input
             type="text"
             name="hub_storage_type_id"
             hidden
-            value={setting.default_storage_type.id}
+            defaultValue={setting.default_storage_type.id}
           />
           <input
             type="text"
             name="payer_type"
             hidden
-            value={payload.payer_type}
+            defaultValue={payload.payer_type}
           />
-          <input type="text" name="quantity" hidden value={payload.quantity} />
+          <input
+            type="text"
+            name="quantity"
+            hidden
+            defaultValue={payload.quantity}
+          />
           <FormLayout.Group condensed>
             <AutocompleteComponent
               options={options.map((hub) => ({
@@ -313,6 +354,9 @@ export default function FailedPage() {
                   <small>{option.data.address.full_address}</small>
                 </div>
               )}
+              error={
+                errors && errors.error ? errors.errors.destination_hub_id : ""
+              }
             />
             <DatePickerInput
               label="Select a date"
@@ -323,6 +367,7 @@ export default function FailedPage() {
               disableSpecificDates={disabledDate}
               onMonthChange={handleMonthChange}
               loading={!fetcher.data}
+              error={errors && errors.error ? errors.errors.pickup_date : ""}
             />
           </FormLayout.Group>
           <TextField

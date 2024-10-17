@@ -119,6 +119,7 @@ export interface ErrorDetails {
   details: Details;
   error_message?: string;
   metadata: null;
+  errors: Record<string, string>;
 }
 
 export interface Details {

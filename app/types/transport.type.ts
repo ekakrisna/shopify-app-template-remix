@@ -1,4 +1,4 @@
-import type { Setting } from "./user.type";
+import type { ErrorDetails, Setting } from "./user.type";
 
 export interface ParamProps {
   id?: string;
@@ -167,6 +167,7 @@ export interface TransportResponse {
   transports: TransportProps[];
   transport: TransportProps;
   meta: MetaResponse;
+  errors: ErrorDetails;
 }
 
 export type Dimension = {
